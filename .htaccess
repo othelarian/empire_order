@@ -1,0 +1,13 @@
+
+RewriteEngine ON
+
+RewriteRule ^([a-z]+)\/([a-z0-9]+)(/)?$ /empire_order/index.php?cmd=$1&arg=$2 [L]
+RewriteRule ^([a-z]+)(/)?$ /empire_order/index.php?cmd=$1 [L]
+
+ErrorDocument 400 /empire_order/index.php
+ErrorDocument 401 /empire_order/index.php
+ErrorDocument 403 /empire_order/index.php
+ErrorDocument 404 /empire_order/index.php
+ErrorDocument 500 /empire_order/index.php
+
+Options -Indexes
