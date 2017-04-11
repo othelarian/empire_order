@@ -2,7 +2,6 @@
 
 var todolist = []
 var journal = []
-var ajaxstate = ""
 var ajaxcmd = []
 
 // HELPERS ############################
@@ -94,7 +93,10 @@ function updateModel() {
 function ajaxsync(res) {
     if (res == "start") {
         //
-        //ajax.send("GET",server)
+        // TODO : set the post variable
+        //
+        ajax.open("POST","")
+        //ajax.send()
         //
     }
     else if (res == "ok") {
@@ -138,9 +140,7 @@ function synchronize() {
     dialogblocker.visible = true
     dialogrect.visible = true
     dialogmsg.text = "Synchronisation\nen cours ..."
-    //
     ajaxcmd = [{action: 'sync'}]
-    //
     tododb.transaction(function(tx) {
         var rs = tx.executeSql("SELECT * FROM journal ORDER BY date;")
         for (var i=0;i<rs.rows.length;i++) {
@@ -152,13 +152,8 @@ function synchronize() {
             ajaxcmd.push(obj)
         }
     })
-    //
+    ajaxcmd.push({action: 'sync'})
     ajaxsync("start")
-    //
-    // TEST
-    //diagtimer.start()
-    // TEST
-    //
 }
 
 function addTask() {
@@ -215,21 +210,15 @@ function initWindow() {
     // set ajax object
     ajax = new XMLHttpRequest()
     ajax.onreadystatechange = function() {
-        if (ajax.readyState == XMLHttpRequest.HEADERS_RECEIVED) {
-        }
+        if (ajax.readyState == XMLHttpRequest.HEADERS_RECEIVED) {}
         else if (ajax.readyState == XMLHttpRequest.DONE) {
             if (ajax.status == 200) {
-                //ajaxsync(ajax.responseText)
+                ajaxsync(ajax.responseText)
             }
             else {
-                //
-                // TODO : network failed
-                //
+                dialogmsg.text = "Échec de la\nsynchronisation"
+                diagtimer.start()
             }
         }
     }
-    //
-    ajax.open("GET",server)
-    ajax.send()
-    //
 }
