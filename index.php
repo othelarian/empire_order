@@ -33,6 +33,7 @@ function bddRequest($mod,$msg) {
     $stmt->bindParam(":detail",$_POST["detail"]);
     $stmt->execute();
     $db->commit();
+    echo "ok";
   }
   catch(PDOException $e) {
     echo $e->getMessage();
