@@ -80,6 +80,12 @@ function getSynchro() {
     $json['last'] = $row['date'];
     $json['list'][] = array('idx'=>$row['idx'], 'action'=>$row['action'], 'detail'=>$row['detail']);
   }
+  if ($json["last"] == 0) {
+    $stmt = $db->prepare("SELECT date FROM journal ORDER BY date DESC LIMIT 1;");
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_NEXT);
+    $json["last"] = $row["date"];
+  }
 	$db->commit();
   echo json_encode($json);
 }
