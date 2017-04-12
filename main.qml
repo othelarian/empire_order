@@ -27,10 +27,7 @@ Window {
     ListModel { id: todoModel }
     Timer {
         id: diagtimer; interval: 2000; running: false; repeat: false
-        onTriggered: {
-            dialogrect.visible = false
-            dialogblocker.visible = false
-        }
+        onTriggered: Script.timerout()
     }
     StackView {
         id: mainStack
@@ -103,13 +100,15 @@ Window {
                     spacing: 10
                     Rectangle {
                         width: 220; height: 40
-                        color: "white"
-                        border.color: "black"; border.width: 1
+                        color: (statut)? "#ddd" : "white"
+                        border.color: (journal)? "#aaa" : "black"
+                        border.width: 2
                         Text {
                             anchors.fill: parent
                             anchors.margins: 5
                             wrapMode: TextInput.WordWrap
                             font.strikeout: statut
+                            color: (journal)? "#aaa" : "black"
                             text: texte
                         }
                     }

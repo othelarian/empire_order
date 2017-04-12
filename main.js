@@ -3,6 +3,8 @@
 var todolist = []
 var journal = []
 var ajaxcmd = []
+var ajaxlength = 0
+var ajaxcurr = 0
 
 // HELPERS ############################
 
@@ -43,7 +45,8 @@ function getTodoEntries() {
             var obj = {
                 idx: rs.rows.item(i).idx,
                 texte: rs.rows.item(i).info,
-                statut: rs.rows.item(i).statut
+                statut: rs.rows.item(i).statut,
+                journal: false
             }
             todolist.push(obj)
         }
@@ -75,12 +78,14 @@ function updateModel() {
             tmp[journal[i].idx] = {
                 idx: journal[i].idx,
                 texte: journal[i].detail,
-                statut: false
+                statut: 0,
+                journal: true
             }
             break
         case "remove": delete tmp[journal[i].idx]; break
         case "mod":
-            tmp[journal[i].idx].statut = !tmp[journal[i].idx].statut
+            tmp[journal[i].idx].statut = (tmp[journal[i].idx].statut == 1)? 0 : 1
+            tmp[journal[i].idx].journal = true
             break
         }
     }
@@ -90,34 +95,106 @@ function updateModel() {
     }
 }
 
+function ajaxinit(url,detail) {
+    ajax = new XMLHttpRequest()
+    ajax.onreadystatechange = function() {
+        if (ajax.readyState == XMLHttpRequest.LOADING) {}
+        else if (ajax.readyState == XMLHttpRequest.HEADERS_RECEIVED) {}
+        else if (ajax.readyState == XMLHttpRequest.DONE) {
+            if (ajax.status == 200) { ajaxsync(ajax.responseText) }
+            else {
+                dialogmsg.text = "Échec de la\nsynchronisation"
+                diagtimer.start()
+            }
+        }
+    }
+    ajax.open("POST",url,true)
+    ajax.setRequestHeader("Content-type","application/x-www-form-urlencoded")
+    ajax.send("detail="+detail)
+}
+
 function ajaxsync(res) {
-    if (res == "start") {
-        //
-        // TODO : set the post variable
-        //
-        ajax.open("POST","")
-        //ajax.send()
-        //
+    if (res == "start") { ajaxinit(server+"?cmd=synchro&arg="+appid,lastsync) }
+    else if (res == "action") {
+        tododb.transaction(function(tx) {
+            var check = true
+            var rs = tx.executeSql("SELECT COUNT(*) AS res FROM todo WHERE idx=?;",[ajaxcmd[0].idx])
+            switch (ajaxcmd[0].action) {
+            case "add":
+                if (rs.rows.item(0).res > 0) { check = false }
+                break
+            case "remove":
+                if (rs.rows.item(0).res == 0) { check = false }
+                break
+            }
+            if (check) {
+                var url = server+"?cmd="+ajaxcmd[0].action+"&arg="+ajaxcmd[0].idx
+                ajaxinit(url,ajaxcmd[0].detail)
+            }
+            else { ajaxsync("ok") }
+        })
+    }
+    else if (res == "finish") {
+        dialogmsg.text = "Finalisation ..."
+        ajaxinit(server+"?cmd=synchro&arg=all",lastsync)
     }
     else if (res == "ok") {
-        //
-        //
+        ajaxcurr++
+        dialogmsg.text = "Envoi des modifications\n("+ajaxcurr+"/"+ajaxlength+")"
+        var cmd = ajaxcmd.shift()
+        tododb.transaction(function(tx) {
+            var req = [cmd.idx,cmd.action]
+            tx.executeSql("DELETE FROM journal WHERE idx=? AND action=?;",req)
+        })
+        if (ajaxcmd.length == 0) { ajaxsync("finish") }
+        else { ajaxsync("action") }
     }
     else if (res[0] == "{") {
-        //
-        // TODO : parse json
-        //
-        console.log("json parsing")
-        console.log(res)
-        //
+        try {
+            var rep = JSON.parse(res)
+            tododb.transaction(function(tx) {
+                for (var i=0;i<rep.list.length;i++) {
+                    dialogmsg.text = "Récupération des ordres\n("+i+"/"+rep.list.length+")"
+                    var req = []
+                    switch (rep.list[i].action) {
+                    case "add":
+                        req = [rep.list[i].idx,rep.list[i].detail,false]
+                        tx.executeSql("INSERT INTO todo VALUES(?,?,?);",req)
+                        break
+                    case "mod":
+                        var rs = tx.executeSql("SELECT * FROM todo WHERE idx=?;",[rep.list[i].idx])
+                        req = [!rs.rows.item(0).statut,rep.list[i].idx]
+                        tx.executeSql("UPDATE todo SET statut=? WHERE idx=?;",req)
+                        break
+                    case "remove":
+                        tx.executeSql("DELETE FROM todo WHERE idx=?;",[rep.list[i].idx])
+                        break
+                    }
+                }
+                if (rep.last == 0) {
+                    lastsync = rep.last
+                    tx.executeSql("UPDATE parameters SET value=? WHERE label='last';",[lastsync])
+                }
+            })
+            if (ajaxcmd.length > 0) {
+                ajaxlength = ajaxcmd.length
+                ajaxcurr = 0
+                dialogmsg.text = "Envoi des modifications\n(0/"+ajaxlength+")"
+                ajaxsync("action")
+            }
+            else {
+                dialogmsg.text = "Synchronisation terminée"
+                diagtimer.start()
+            }
+        }
+        catch (e) {
+            dialogmsg.text = "Échec de la\nsynchronisation"
+            diagtimer.start()
+        }
     }
     else {
-        //
-        // TODO : connexion failed
-        //
-        console.log("network error")
-        console.log(res)
-        //
+        dialogmsg.text = "Échec de la\nsynchronisation"
+        diagtimer.start()
     }
 }
 
@@ -140,7 +217,7 @@ function synchronize() {
     dialogblocker.visible = true
     dialogrect.visible = true
     dialogmsg.text = "Synchronisation\nen cours ..."
-    ajaxcmd = [{action: 'sync'}]
+    ajaxcmd = []
     tododb.transaction(function(tx) {
         var rs = tx.executeSql("SELECT * FROM journal ORDER BY date;")
         for (var i=0;i<rs.rows.length;i++) {
@@ -152,7 +229,6 @@ function synchronize() {
             ajaxcmd.push(obj)
         }
     })
-    ajaxcmd.push({action: 'sync'})
     ajaxsync("start")
 }
 
@@ -193,6 +269,14 @@ function remTask(idx) {
     })
 }
 
+function timerout() {
+    getTodoEntries()
+    getJournalEntries()
+    updateModel()
+    dialogrect.visible = false
+    dialogblocker.visible = false
+}
+
 function initWindow() {
     tododb = LocalStorage.openDatabaseSync("OthyTodoListDB","1.0","",1000000,Script.dbinit)
     tododb.transaction(function(tx) {
@@ -207,18 +291,4 @@ function initWindow() {
     getTodoEntries()
     getJournalEntries()
     updateModel()
-    // set ajax object
-    ajax = new XMLHttpRequest()
-    ajax.onreadystatechange = function() {
-        if (ajax.readyState == XMLHttpRequest.HEADERS_RECEIVED) {}
-        else if (ajax.readyState == XMLHttpRequest.DONE) {
-            if (ajax.status == 200) {
-                ajaxsync(ajax.responseText)
-            }
-            else {
-                dialogmsg.text = "Échec de la\nsynchronisation"
-                diagtimer.start()
-            }
-        }
-    }
 }
