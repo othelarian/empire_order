@@ -27,13 +27,37 @@ function bddRequest($mod,$msg) {
 	$db = connBdd();
   try {
     $db->beginTransaction();
-    $stmt = $db->prepare("INSERT INTO journal VALUES(CURRENT_TIMESTAMP,:idx,:type,:detail);");
-    $stmt->bindParam(":idx",$_GET["arg"]);
-    $stmt->bindParam(":type",$mod);
-    $stmt->bindParam(":detail",$_POST["detail"]);
-    $stmt->execute();
+    $check = true;
+    if ($mod == "add") {
+      $stmt = $db->prepare("SELECT COUNT(*) AS res FROM journal WHERE idx=:idx ORDER BY date DESC LIMIT 1;");
+      $stmt->bindParam(":idx",$_GET["arg"]);
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_NEXT);
+      if ($row["res"] == 1) { $check = false; echo "ok"; }
+    }
+    else if ($mod == "mod") {
+      $stmt = $db->prepare("SELECT COUNT(*) AS res FROM journal WHERE idx=:idx AND action='remove';");
+      $stmt->bindParam(":idx",$_GET["arg"]);
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_NEXT);
+      if ($row["res"] == 1) { $check = false; echo "ok"; }
+    }
+    else if ($mod == "remove") {
+      $stmt = $db->prepare("SELECT COUNT(*) AS res FROM journal WHERE idx=:idx AND action='remove';");
+      $stmt->bindParam(":idx",$_GET["arg"]);
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_NEXT);
+      if ($row["res"] == 1) { $check = false; echo "ok"; }
+    }
+    if ($check) {
+      $stmt = $db->prepare("INSERT INTO journal VALUES(CURRENT_TIMESTAMP,:idx,:type,:detail);");
+      $stmt->bindParam(":idx",$_GET["arg"]);
+      $stmt->bindParam(":type",$mod);
+      $stmt->bindParam(":detail",$_POST["detail"]);
+      $stmt->execute();
+      echo "ok";
+    }
     $db->commit();
-    echo "ok";
   }
   catch(PDOException $e) {
     echo $e->getMessage();
@@ -45,7 +69,7 @@ function bddRequest($mod,$msg) {
 function getSynchro() {
 	if (!isset($_GET["arg"]) || !isset($_POST["detail"])) { echo "I need to sleep..."; return; }
 	$db = connBdd();
-  $arg = $_GET["arg"] . '%';
+  $arg = $_GET["arg"] . '-%';
 	$db->beginTransaction();
   $stmt = $db->prepare("SELECT * FROM journal WHERE idx NOT LIKE :idx AND date > :detail ORDER BY date;");
   $stmt->bindParam(":idx",$arg);
@@ -53,9 +77,8 @@ function getSynchro() {
   $stmt->execute();
   $json = array('list' => array(),'last' => '0');
   while ($row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT)) {
-    $json['list'][] = $row['date'];
     $json['last'] = $row['date'];
-    $json[$row['idx']] = array('idx'=>$row['idx'], 'action'=>$row['action'], 'detail'=>$row['detail']);
+    $json['list'][] = array('idx'=>$row['idx'], 'action'=>$row['action'], 'detail'=>$row['detail']);
   }
 	$db->commit();
   echo json_encode($json);
