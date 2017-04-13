@@ -18,7 +18,7 @@ Window {
     property color bluebtn: "#3af"
     property var tododb
     property var ajax
-    property string server: "http://localhost/empire_order/index.php"
+    property string server: "http://www.arcns.net/empire_order/index.php"
     property string appid
     property string lastsync
     // functions
@@ -89,7 +89,7 @@ Window {
                 id: todolist
                 anchors.top: orderTitle.bottom
                 anchors.bottom: todoBtns.top
-                width: 350
+                width: 340
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.margins: 20
                 spacing: 10
@@ -99,7 +99,7 @@ Window {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 10
                     Rectangle {
-                        width: 220; height: 40
+                        width: 210; height: 40
                         color: (statut)? "#ddd" : "white"
                         border.color: (journal)? "#aaa" : "black"
                         border.width: 2

@@ -171,10 +171,8 @@ function ajaxsync(res) {
                         break
                     }
                 }
-                if (rep.last == 0) {
-                    lastsync = rep.last
-                    tx.executeSql("UPDATE parameters SET value=? WHERE label='last';",[lastsync])
-                }
+                lastsync = rep.last
+                tx.executeSql("UPDATE parameters SET value=? WHERE label='last';",[lastsync])
             })
             if (ajaxcmd.length > 0) {
                 ajaxlength = ajaxcmd.length
