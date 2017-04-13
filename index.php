@@ -86,6 +86,7 @@ function getSynchro() {
     $row = $stmt->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_NEXT);
     $json["last"] = $row["date"];
   }
+  if ($json["last"] == null) { $json["last"] = 0; }
 	$db->commit();
   echo json_encode($json);
 }
@@ -102,7 +103,7 @@ if (isset($_GET["cmd"])) {
 	switch ($_GET["cmd"]) {
 		case "synchro": getSynchro(); break;
 		case "add": bddRequest("add","the debate turned mad."); break;
-		case "remove": bddRequest("rem","What's wrong with you?"); break;
+		case "remove": bddRequest("remove","What's wrong with you?"); break;
 		case "mod": bddRequest("mod","I did it!"); break;
 		case "404":
 		default: badrequest(); break;
