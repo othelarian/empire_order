@@ -160,6 +160,22 @@ Window {
                     radius: 3
                     MouseArea {
                         anchors.fill: parent
+                        onClicked: Script.cleandb()
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        color: "white"
+                        font.pointSize: 12
+                        font.bold: true
+                        text: "Vider"
+                    }
+                }
+                Rectangle {
+                    height: root.heightbtn; width: root.widthbtn
+                    color: root.bluebtn
+                    radius: 3
+                    MouseArea {
+                        anchors.fill: parent
                         onClicked: Script.synchronize()
                     }
                     Text {

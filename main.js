@@ -246,6 +246,7 @@ function modTask(idx) {
             tx.executeSql("DELETE FROM journal WHERE idx=? AND action='mod';",[idx])
         }
         else { updateJournal(idx,'mod','') }
+        getTodoEntries()
         getJournalEntries()
         updateModel()
     })
@@ -262,6 +263,17 @@ function remTask(idx) {
         if (rs.rows.item(0).res == 1) {
             tx.executeSql("DELETE FROM journal WHERE idx=? AND action='mod';",[idx])
         }
+        getJournalEntries()
+        updateModel()
+    })
+}
+
+function cleandb() {
+    tododb.transaction(function(tx) {
+        tx.executeSql("DELETE FROM todo;")
+        tx.executeSql("UPDATE parameters SET value=0 WHERE label='last';")
+        lastsync = 0
+        getTodoEntries()
         getJournalEntries()
         updateModel()
     })
